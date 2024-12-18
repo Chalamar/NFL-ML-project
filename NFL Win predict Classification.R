@@ -19,7 +19,6 @@ df$OppPittsburghSteelers <- ifelse(df$Opp == "Pittsburgh Steelers", 1, 0)
 df$OppKansasCityChiefs <- ifelse(df$Opp == "Kansas City Chiefs", 1, 0)
 df$TeamPittsburghSteelers <- ifelse(df$Team == "Pittsburgh Steelers", 1, 0)
 df$TeamKansasCityChiefs <- ifelse(df$Team == "Kansas City Chiefs", 1, 0)
-
 install.packages("writexl")
 library(writexl)
 write_xlsx(df, "~/Desktop/my_dataset.xlsx")
@@ -499,7 +498,237 @@ TUNE_TABLE <- matrix(c(E_IN_PRETUNE,
                      ncol=2, 
                      byrow=TRUE)
 
-colnames(TUNE_TABLE) <- c('UNTUNED', 'TUNED')
-rownames(TUNE_TABLE) <- c('E_IN', 'E_OUT')
-TUNE_TABLE #REPORT OUT-OF-SAMPLE ERRORS FOR BOTH HYPOTHESIS
+install.packages(c("ggplot2", "dplyr", "gridExtra", "corrplot"))
+library(ggplot2)   # For creating plots
+library(dplyr)     # For data manipulation
+library(gridExtra) # For arranging multiple plots
+library(corrplot)  # For correlation matrix
+ggplot(df, aes(x = as.factor(Home), y = PF, fill = as.factor(Home))) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("0" = "lightblue", "1" = "lightgreen"), 
+                    labels = c("Away", "Home")) +
+  theme_minimal() +
+  ggtitle("Points Scored: Home vs Away") +
+  xlab("Game Location") +
+  ylab("Points Scored") +
+  labs(fill = "Location")
+ggplot(df, aes(x = as.factor(Home), fill = as.factor(Win))) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(values = c("0" = "red", "1" = "green"), 
+                    labels = c("Loss", "Win")) +
+  theme_minimal() +
+  ggtitle("Win/Loss Count by Home/Away") +
+  xlab("Game Location") +
+  ylab("Count") +
+  labs(fill = "Result")
 
+weekly_points <- df %>%
+  group_by(Week) %>%
+  summarise(Average_PF = mean(PF))
+
+ggplot(weekly_points, aes(x = Week, y = Average_PF)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red") +
+  theme_minimal() +
+  ggtitle("Average Points Scored Over Weeks") +
+  xlab("Week") +
+  ylab("Average Points Scored")
+
+# Compute and plot the cleaner correlation matrix
+# Set up a larger plot window
+options(repr.plot.width = 12, repr.plot.height = 10) # For RStudio or Jupyter (adjust sizes as needed)
+
+# Set up a larger plot window
+options(repr.plot.width = 12, repr.plot.height = 10) # For RStudio or Jupyter (adjust sizes as needed)
+
+# Scatter plot: 3rd Down Conversions vs. Attempts
+ggplot(df, aes(x = `3DAtt`, y = `3DConv`, color = Conv_per)) +
+  geom_point(size = 3, alpha = 0.7) +
+  scale_color_gradient(low = "yellow", high = "green") +
+  theme_minimal() +
+  ggtitle("3rd Down Conversions vs. Attempts") +
+  xlab("3rd Down Attempts") +
+  ylab("3rd Down Conversions") +
+  labs(color = "Conversion %")
+
+# Heatmap of 3rd Down Attempts vs. Conversions
+ggplot(df, aes(x = `3DAtt`, y = `3DConv`, fill = Conv_per)) +
+  geom_tile(color = "white") +                  # Tile plot for heatmap
+  scale_fill_gradient(low = "yellow", high = "red") +  # Gradient for conversion %
+  theme_minimal() +
+  ggtitle("3rd Down Conversion Efficiency") +
+  xlab("3rd Down Attempts") +
+  ylab("3rd Down Conversions") +
+  labs(fill = "Conversion %") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12)
+  )
+
+# Bubble plot: Points Scored vs 3rd Down Conversions
+ggplot(df, aes(x = `3DConv`, y = PF, size = `3DAtt`, color = Conv_per)) +
+  geom_point(alpha = 0.7) +
+  scale_color_gradient(low = "blue", high = "green") +
+  theme_minimal() +
+  ggtitle("3rd Down Conversions vs Points Scored") +
+  xlab("3rd Down Conversions") +
+  ylab("Points Scored") +
+  labs(color = "Conversion %", size = "3rd Down Attempts") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12)
+  )
+
+# Load ggridges library for ridgeline plot
+install.packages("ggridges")
+library(ggridges)
+
+# Ridgeline plot: Points Scored for Home vs Away
+ggplot(df, aes(x = PF, y = as.factor(Home), fill = as.factor(Home))) +
+  geom_density_ridges(alpha = 0.8) +
+  scale_fill_manual(values = c("0" = "skyblue", "1" = "lightgreen"), 
+                    labels = c("Away", "Home")) +
+  theme_ridges() +
+  ggtitle("Distribution of Points Scored: Home vs Away") +
+  xlab("Points Scored") +
+  ylab("Game Location") +
+  labs(fill = "Location") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12)
+  )
+
+# Bubble Plot: 3rd Down Efficiency
+ggplot(df, aes(x = `3DAtt`, y = `3DConv`, size = Conv_per, color = Conv_per)) +
+  geom_point(alpha = 0.7) +
+  scale_size_continuous(range = c(3, 10)) +
+  scale_color_gradient(low = "blue", high = "green") +
+  theme_minimal() +
+  ggtitle("3rd Down Efficiency: Conversions vs Attempts") +
+  xlab("3rd Down Attempts") +
+  ylab("3rd Down Conversions") +
+  labs(size = "Efficiency (%)", color = "Conversion %") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12)
+  )
+
+# Boxplot with jitter for 3rd Down Attempts by Wins
+ggplot(df, aes(x = as.factor(Win), y = `3DAtt`, fill = as.factor(Win))) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +  # Add boxplot, hide outliers
+  geom_jitter(width = 0.2, alpha = 0.5, color = "black") + # Add jitter for points
+  scale_fill_manual(values = c("0" = "red", "1" = "green"), 
+                    labels = c("Loss", "Win")) +  # Custom colors for Win/Loss
+  theme_minimal() +
+  ggtitle("3rd Down Attempts vs Wins") +
+  xlab("Game Result") +
+  ylab("3rd Down Attempts") +
+  labs(fill = "Game Result") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "top"
+  )
+
+# Group data by 3rd Downs Attempted and calculate average wins
+avg_wins <- df %>%
+  group_by(`3DAtt`) %>%
+  summarise(Average_Wins = mean(Win, na.rm = TRUE), Count = n()) %>% # Also count games for context
+  ungroup()
+
+# Plot Average Wins by 3rd Downs Attempted
+ggplot(avg_wins, aes(x = `3DAtt`, y = Average_Wins)) +
+  geom_line(color = "blue", size = 1) +                     # Line plot
+  geom_point(aes(size = Count), color = "red", alpha = 0.7) + # Points sized by count
+  theme_minimal() +
+  ggtitle("Average Wins by 3rd Downs Attempted") +
+  xlab("3rd Downs Attempted") +
+  ylab("Average Wins") +
+  labs(size = "Game Count") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "top"
+  )
+
+# Group data by Turnovers and calculate average wins
+avg_wins_turnovers <- df %>%
+  group_by(TOA) %>%
+  summarise(Average_Wins = mean(Win, na.rm = TRUE), Count = n()) %>%
+  ungroup()
+
+# Plot Average Wins by Turnovers
+ggplot(avg_wins_turnovers, aes(x = TOA, y = Average_Wins)) +
+  geom_line(color = "blue", size = 1) +                     # Line plot
+  geom_point(aes(size = Count), color = "red", alpha = 0.7) + # Points sized by count
+  theme_minimal() +
+  ggtitle("Average Wins by Turnovers") +
+  xlab("Turnovers (TOA)") +
+  ylab("Average Wins") +
+  labs(size = "Game Count") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "top"
+  )
+
+# Scatter Plot: Turnovers vs Points For with Win Outcome
+ggplot(df, aes(x = TOA, y = PF, color = as.factor(Win))) +
+  geom_point(alpha = 0.7, size = 3) +
+  scale_color_manual(values = c("0" = "red", "1" = "green"), 
+                     labels = c("Loss", "Win")) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Turnovers vs Points Scored by Win Outcome") +
+  xlab("Turnovers (TOA)") +
+  ylab("Points Scored (PF)") +
+  labs(color = "Game Result") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "top"
+  )
+
+# Group data by Opponent Turnovers and calculate average wins
+avg_wins_oppto <- df %>%
+  group_by(OppTO) %>%
+  summarise(Average_Wins = mean(Win, na.rm = TRUE), Count = n()) %>%
+  ungroup()
+
+# Plot Average Wins by Opponent Turnovers
+ggplot(avg_wins_oppto, aes(x = OppTO, y = Average_Wins)) +
+  geom_line(color = "blue", size = 1) +                     # Line plot
+  geom_point(aes(size = Count), color = "red", alpha = 0.7) + # Points sized by count
+  theme_minimal() +
+  ggtitle("Average Wins by Opponent Turnovers") +
+  xlab("Opponent Turnovers (OppTO)") +
+  ylab("Average Wins") +
+  labs(size = "Game Count") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "top"
+  )
+
+# Group data by Opponent Turnovers and calculate win percentage
+heatmap_data_oppto <- df %>%
+  group_by(OppTO) %>%
+  summarise(Win_Percentage = mean(Win, na.rm = TRUE)) %>%
+  ungroup()
+
+# Heatmap of Opponent Turnovers vs Win Percentage
+ggplot(heatmap_data_oppto, aes(x = OppTO, y = 1, fill = Win_Percentage)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "red", high = "green") +
+  theme_minimal() +
+  ggtitle("Win Percentage by Opponent Turnovers") +
+  xlab("Opponent Turnovers (OppTO)") +
+  ylab("") +
+  labs(fill = "Win Percentage") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "top"
+  )
